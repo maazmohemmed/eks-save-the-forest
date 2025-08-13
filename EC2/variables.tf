@@ -16,7 +16,7 @@ variable "key_name" {
 variable "my_ip" {
   description = "Your IP address in CIDR notation (e.g., 203.0.113.0/24)"
   type        = string
-  default     = "0.0.0/0" # Change this to your actual IP for security
+  default     = "0.0.0.0/0" # Change this to your actual IP for security
 }
 
 variable "vpc_id" {
