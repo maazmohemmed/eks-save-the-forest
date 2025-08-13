@@ -1,0 +1,6 @@
+ami           = "ami-0de716d6197524dd9"
+instance_type = "t3.micro"
+key_name      = "web-game-app-key"
+my_ip         = "203.0.113.0/24"
+vpc_id        = "vpc-048c4ffc46defb288"
+subnet_id     = "subnet-053ad24e3818e1607"
