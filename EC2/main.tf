@@ -1,5 +1,4 @@
 resource "aws_instance" "Jenkins_Server" {
-
   ami                         = var.ami
   instance_type               = var.instance_type
   key_name                    = var.key_name
@@ -10,7 +9,10 @@ resource "aws_instance" "Jenkins_Server" {
 
 
   user_data = <<-EOF
-  #!/bin/bash
+#!/bin/bash
+
+# Log all output for debugging
+exec > >(tee /var/log/user-data.log|logger -t user-data-script-log) 2>&1
 
 # Update the system
 sudo apt-get update -y
@@ -23,10 +25,10 @@ sudo apt-get install -y \
     gnupg \
     lsb-release \
     unzip \
-    git
+    git \
+    software-properties-common
 
 # Install JDK 17 (Amazon Corretto)
-sudo apt-get install -y software-properties-common
 sudo mkdir -p /usr/share/keyrings
 curl -s https://apt.corretto.aws/corretto.key | sudo gpg --dearmor -o /usr/share/keyrings/corretto.gpg
 sudo add-apt-repository 'deb [signed-by=/usr/share/keyrings/corretto.gpg] https://apt.corretto.aws stable main'
@@ -34,21 +36,21 @@ sudo apt-get update -y
 sudo apt-get install -y java-17-amazon-corretto-jdk
 
 # Install AWS CLI v2
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-unzip awscliv2.zip
-sudo ./aws/install
-rm -rf awscliv2.zip aws
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip"
+unzip /tmp/awscliv2.zip -d /tmp
+sudo /tmp/aws/install
+sudo rm -rf /tmp/awscliv2.zip /tmp/aws
 
 # Install Docker
 sudo mkdir -p /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 sudo apt-get update -y
 sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
-# Add jenkins user to docker group (assuming jenkins user will be created)
+# Add jenkins user to docker group
 sudo usermod -aG docker jenkins
 
 # Install eksctl
@@ -56,7 +58,7 @@ curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/d
 sudo mv /tmp/eksctl /usr/local/bin
 
 # Install kubectl
-sudo curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 rm kubectl
 
